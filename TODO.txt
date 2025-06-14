@@ -1,0 +1,17 @@
+Notatki z WDZD
+Co jest:
+- zbiór danych - zbiór sentiment140 - 16mln wpisów z Tweetera
+- obróbka wstępna danych - czyszczenie ze stop wordów, linków, interpunkcji itp.
+
+Do zrobienia
+- interfejs do wizualizacji - dashboard ( kilka dostępnych metod, możliwość wyboru i ew. "eksploracja" danych, przemieszczanie), dodatkowe info po najechaniu na punkt
+- pipeline do wczytywania plików, preprocessingu
+- model dla angielskiego ( zawężony zbiór danych )
+- osadzenia i embeddingi (dla lepszych osiągów można próbować wielowątkowość, bilbioteka RAPIDS)
+- wizualizacja embeddingów
+- testy parametrów oraz informacja z jakimi model był trenowany
+- wyszukać modeli konkretne do tweedów, ogólnikowy - BERT
+
+wymagania
+~ 100 tyś. elementów
+czas inferencji BERTa - jeśli za wolny to przeliczyć przed, może uda się online
