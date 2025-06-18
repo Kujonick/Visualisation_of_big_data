@@ -4,6 +4,7 @@ import numpy as np
 import plotly.express as px
 import datetime
 import os
+import json
 
 
 MAX_EMBEDDINGS_ON_SCREEN = 20_000
@@ -13,18 +14,26 @@ EMBEDDINGS_FOLDER = "D:\\WDZD\\results"
 
 # read the data
 original_data = pd.read_parquet(REFINED_DATA_PATH)
+original_data['topic'] = original_data['topic'].astype(str)
+
+with open('data\\sentiment140_label_mapping.json', "r", encoding="utf-8") as f:
+    class_mapping = json.load(f)
+
+original_data['topic'] = original_data['topic'].map(class_mapping)
 
 # read embeddings
 n_points = original_data.shape[0]
 
 
-col1, col2 = st.columns(2)
+col1, col2, col3= st.columns(3)
 with col1:
     method_name = st.radio("Choose method", [ "IncrementalPCA", "UMAP", "PACMAP", "PCA"])
 
 with col2:
     dim = st.radio("Choose embedding dimensionality", ["2D", "3D"])
 
+with col3:
+    labeling = st.radio("Choose labeling", ["time", "topic"])
 
 
 match method_name:
@@ -79,17 +88,28 @@ if filtered_df.shape[0] > MAX_EMBEDDINGS_ON_SCREEN:
 else:
     sampled_df = filtered_df
 
+if labeling == 'time':
+    labeling_kwargs = dict(
+        color='timestamp_numeric',
+        color_continuous_scale='Turbo',
+        range_color=[min_timestamp, max_timestamp] 
+    )
+else:
+    color_map = {topic: px.colors.qualitative.Plotly[i % len(px.colors.qualitative.Plotly)] for i, topic in enumerate(df['topic'].unique())}
+    labeling_kwargs = dict(
+        color='topic',
+        color_discrete_map=color_map
+    )
+
 
 
 if dim == "2D":
     fig = px.scatter(
         sampled_df, x='x', y='y',
         hover_data=['tweet'],
-        color='timestamp_numeric',
         custom_data=['tweet'],
         title="Embedding 2D",
-        color_continuous_scale='Turbo',
-        range_color=[min_timestamp, max_timestamp] 
+        **labeling_kwargs
     )
     fig.update_traces(
     hovertemplate="<b>%{customdata[0]}</b><extra></extra>",
@@ -103,12 +123,10 @@ if dim == "2D":
 else:
     fig = px.scatter_3d(
         sampled_df, x='x', y='y', z='z',
-        color='timestamp_numeric',
         hover_data=['tweet'],
         custom_data=['tweet'],
         title="Embedding 3D",
-        color_continuous_scale='Turbo',
-        range_color=[min_timestamp, max_timestamp] 
+        **labeling_kwargs
     )
     fig.update_traces(
     hovertemplate="<b>%{customdata[0]}</b><extra></extra>",
@@ -141,7 +159,11 @@ else:
         ),
         margin=dict(l=0, r=0, t=0, b=0)
     )
-fig.update_coloraxes(showscale=False)
+
+if labeling == 'time':
+    fig.update_coloraxes(showscale=False)
+else:
+    fig.update_layout(legend = dict(itemsizing='constant'))
 
 
 selected = st.plotly_chart(fig, use_container_width=True)
