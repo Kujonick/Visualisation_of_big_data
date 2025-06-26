@@ -8,17 +8,28 @@ import json
 
 
 MAX_EMBEDDINGS_ON_SCREEN = 20_000
-REFINED_DATA_PATH = 'data\\refined.parquet'
-EMBEDDINGS_FOLDER = "D:\\WDZD\\results"
+REFINED_DATA_PATH = 'data'
+
 
 
 # read the data
-original_data = pd.read_parquet(REFINED_DATA_PATH)
+dataset_name = st.radio("Choose dataset", ["Sentiment", "Data Science"])
+if dataset_name == "Sentiment":
+    original_data = pd.read_parquet(os.path.join(REFINED_DATA_PATH, 'refined.parquet'))
+    EMBEDDINGS_FOLDER = "D:\\WDZD\\results\\sentiment"
+else:
+    original_data = pd.read_parquet(os.path.join(REFINED_DATA_PATH, 'refined_ds.parquet'))
+    original_data['field'] = original_data['field'].astype(str)
+    EMBEDDINGS_FOLDER = "D:\\WDZD\\results\\data-science"
+    with open('data\\field_mapping.json', "r", encoding="utf-8") as f:
+        field_mapping = json.load(f)
+        original_data['field'] = original_data['field'].map(field_mapping)
+
 original_data['topic'] = original_data['topic'].astype(str)
 
-with open('data\\sentiment140_label_mapping.json', "r", encoding="utf-8") as f:
-    class_mapping = json.load(f)
 
+with open('data\\topic_mapping.json', "r", encoding="utf-8") as f:
+    class_mapping = json.load(f)
 original_data['topic'] = original_data['topic'].map(class_mapping)
 
 # read embeddings
@@ -33,7 +44,10 @@ with col2:
     dim = st.radio("Choose embedding dimensionality", ["2D", "3D"])
 
 with col3:
-    labeling = st.radio("Choose labeling", ["time", "topic"])
+    labels =  ["time", "topic"]
+    if dataset_name == "Data Science":
+        labels.append('field')
+    labeling = st.radio("Choose labeling",labels)
 
 
 match method_name:
@@ -63,8 +77,7 @@ else:
 
 df = original_data.join(embeddings_df)
 df['timestamp'] = pd.to_datetime(df['date'])
-df['timestamp_numeric'] = df['timestamp'].astype('int64') / 1e9
-
+df['timestamp_numeric'] = df['timestamp'].astype('int64') / (1e9 if dataset_name == 'Sentiment' else 1e6)
 
 
 min_date = df['timestamp'].min().to_pydatetime()
@@ -72,6 +85,7 @@ max_date = df['timestamp'].max().to_pydatetime()
 
 min_timestamp = int(min_date.timestamp())
 max_timestamp = int(max_date.timestamp())
+
 
 start_date, end_date = st.slider(
     "Data range:",
@@ -95,9 +109,9 @@ if labeling == 'time':
         range_color=[min_timestamp, max_timestamp] 
     )
 else:
-    color_map = {topic: px.colors.qualitative.Plotly[i % len(px.colors.qualitative.Plotly)] for i, topic in enumerate(df['topic'].unique())}
+    color_map = {topic: px.colors.qualitative.Plotly[i % len(px.colors.qualitative.Plotly)] for i, topic in enumerate(df[labeling].unique())}
     labeling_kwargs = dict(
-        color='topic',
+        color=labeling,
         color_discrete_map=color_map
     )
 
